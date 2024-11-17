@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .task {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .task button {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ваши задачи</h1>
+    <div id="tasks"></div>
+
+    <script>
+        const telegram = window.Telegram.WebApp;
+
+        // Получаем Telegram ID пользователя
+        const telegramId = telegram.initDataUnsafe.user.id;
+
+        // Загрузка задач
+        async function loadTasks() {
+            const response = await fetch(`http://localhost:5000/tasks?telegram_id=${telegramId}`);
+            const tasks = await response.json();
+
+            const tasksContainer = document.getElementById('tasks');
+            tasksContainer.innerHTML = '';
+
+            tasks.forEach(task => {
+                const taskDiv = document.createElement('div');
+                taskDiv.className = 'task';
+                taskDiv.innerHTML = `
+                    <h3>${task.description}</h3>
+                    <p>Статус: ${task.status}</p>
+                    <p>Время: ${task.total_time || 0} секунд</p>
+                    <button onclick="updateTask(${task.id}, 'in_progress')">Начать</button>
+                    <button onclick="updateTask(${task.id}, 'paused')">Пауза</button>
+                    <button onclick="updateTask(${task.id}, 'completed')">Завершить</button>
+                `;
+                tasksContainer.appendChild(taskDiv);
+            });
+        }
+
+        // Обновление статуса задачи
+        async function updateTask(taskId, status) {
+            await fetch(`http://localhost:5000/tasks/${taskId}/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            loadTasks(); // Перезагрузка задач после обновления
+        }
+
+        // Загрузка задач при загрузке страницы
+        loadTasks();
+    </script>
+</body>
+</html>
